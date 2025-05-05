@@ -1,13 +1,23 @@
 'use client';
 
 import React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter, usePathname } from 'next/navigation';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 export default function CallDetailPage() {
   const { id } = useParams();
   const [isFollowing, setIsFollowing] = useState(false);
+  const { connected, publicKey } = useWallet();
+  const [mounted, setMounted] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Set mounted state when component is mounted
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Mock data for token calls - in a real app, this would come from an API call
   const mockCalls = [
@@ -103,6 +113,18 @@ export default function CallDetailPage() {
       </div>
     );
   }
+
+  // Handler for following a call
+  const handleFollowCall = () => {
+    if (!mounted || !connected) {
+      // Redirect to connect page with return URL
+      router.push(`/connect?returnUrl=${encodeURIComponent(pathname)}`);
+      return;
+    }
+    
+    // If connected, toggle following state
+    setIsFollowing(!isFollowing);
+  };
 
   // Helper function to get status color
   const getStatusColor = (status: string) => {
@@ -200,12 +222,12 @@ export default function CallDetailPage() {
 
         {callData.status === 'active' && (
           <button
-            onClick={() => setIsFollowing(!isFollowing)}
+            onClick={handleFollowCall}
             className={`w-full rounded-full ${isFollowing 
               ? 'bg-gray-200 dark:bg-gray-700 text-foreground' 
               : 'bg-blue-600 hover:bg-blue-700 text-white'} py-3 text-sm font-medium`}
           >
-            {isFollowing ? 'Unfollow Call' : 'Follow This Call'}
+            {isFollowing ? 'Unfollow Call' : (connected ? 'Follow This Call' : 'Connect Wallet to Follow')}
           </button>
         )}
 

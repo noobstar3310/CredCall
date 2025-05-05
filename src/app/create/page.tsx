@@ -1,7 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import React from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useWallet } from '@solana/wallet-adapter-react';
+import ProtectedRoute from '../../components/ProtectedRoute';
 
 export default function CreateCallPage() {
   const [tokenAddress, setTokenAddress] = useState('');
@@ -9,19 +12,10 @@ export default function CreateCallPage() {
   const [stakingAmount, setStakingAmount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
-
+  const { publicKey } = useWallet();
+  
   // Mock SOL balance - in a real app, this would come from the connected wallet
   const solBalance = 50;
-
-  const handleConnectWallet = () => {
-    // Mock wallet connection
-    setIsWalletConnected(true);
-  };
-
-  const handleDisconnectWallet = () => {
-    setIsWalletConnected(false);
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,42 +58,25 @@ export default function CreateCallPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <h1 className="text-3xl font-bold text-foreground mb-2">Create a Token Call</h1>
-      <p className="text-gray-600 dark:text-gray-300 mb-8">
-        Stake SOL to publish a public token call. The more you stake, the higher visibility your call receives.
-      </p>
-      
-      {!isWalletConnected ? (
-        <div className="bg-background rounded-xl p-8 shadow-sm border border-gray-200 dark:border-gray-800 text-center">
-          <h2 className="text-xl font-bold mb-4">Connect Your Wallet</h2>
-          <p className="text-gray-600 dark:text-gray-300 mb-6">
-            You need to connect your wallet to create a token call.
-          </p>
-          <button
-            onClick={handleConnectWallet}
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-opacity-90 font-medium px-6 py-3 mx-auto"
-          >
-            Connect Wallet
-          </button>
-        </div>
-      ) : (
+    <ProtectedRoute>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <h1 className="text-3xl font-bold text-foreground mb-2">Create a Token Call</h1>
+        <p className="text-gray-600 dark:text-gray-300 mb-8">
+          Stake SOL to publish a public token call. The more you stake, the higher visibility your call receives.
+        </p>
+        
         <div className="bg-background rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
           <div className="flex justify-between items-center mb-6">
             <div>
               <p className="text-sm text-gray-500">Connected Wallet</p>
-              <p className="font-mono font-medium">sol...8f92</p>
+              <p className="font-mono font-medium">
+                {publicKey ? publicKey.toString().slice(0, 6) + '...' + publicKey.toString().slice(-4) : 'sol...8f92'}
+              </p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Balance</p>
               <p className="font-mono font-medium">{solBalance} SOL</p>
             </div>
-            <button
-              onClick={handleDisconnectWallet}
-              className="text-sm text-gray-500 hover:text-foreground"
-            >
-              Disconnect
-            </button>
           </div>
           
           <form onSubmit={handleSubmit}>
@@ -217,7 +194,7 @@ export default function CreateCallPage() {
             </div>
           </form>
         </div>
-      )}
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 } 

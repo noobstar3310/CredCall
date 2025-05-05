@@ -1,8 +1,10 @@
 'use client';
 
+import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
+import WalletButton from './WalletButton';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -27,12 +29,7 @@ const Navbar = () => {
             <Link href="/profile" className="px-3 py-2 text-sm font-medium text-foreground hover:opacity-80">
               My Profile
             </Link>
-            <Link 
-              href="/connect"
-              className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-opacity-90 font-medium text-sm px-4 py-2"
-            >
-              Connect Wallet
-            </Link>
+            <WalletButton />
           </div>
           
           <div className="flex items-center sm:hidden">
@@ -67,12 +64,9 @@ const Navbar = () => {
             <Link href="/profile" className="block px-3 py-2 text-base font-medium text-foreground hover:opacity-80">
               My Profile
             </Link>
-            <Link 
-              href="/connect"
-              className="block px-3 py-2 text-base font-medium text-foreground hover:opacity-80"
-            >
-              Connect Wallet
-            </Link>
+            <div className="px-3 py-2">
+              <WalletButton />
+            </div>
           </div>
         </div>
       )}
