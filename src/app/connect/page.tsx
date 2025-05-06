@@ -47,9 +47,9 @@ export default function ConnectPage() {
       router.push(returnUrl);
     }
   }, [connected, publicKey, router, returnUrl]);
-
+  
   // Error handler for wallet connection
-  const handleError = useCallback((error) => {
+  const handleError = useCallback((error: Error) => {
     console.error('Wallet connection error:', error);
     setHasError(true);
   }, []);
