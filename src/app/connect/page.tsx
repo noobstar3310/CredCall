@@ -1,135 +1,151 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { useState } from 'react';
-import Link from 'next/link';
+import React, { useEffect, useState } from "react";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { LAMPORTS_PER_SOL, Connection, PublicKey } from "@solana/web3.js";
 
 export default function ConnectPage() {
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
-  const [walletType, setWalletType] = useState('');
+  const { publicKey, connected } = useWallet();
+  const [balance, setBalance] = useState<number | null>(null);
+  const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
 
-  const handleConnect = (type: string) => {
-    setIsConnecting(true);
-    setWalletType(type);
-    
-    // Simulate wallet connection
-    setTimeout(() => {
-      setIsConnecting(false);
-      setIsConnected(true);
-    }, 1500);
+  useEffect(() => {
+    const getWalletInfo = async () => {
+      if (publicKey) {
+        try {
+          // Connect to the Solana devnet
+          const connection = new Connection(
+            "https://api.devnet.solana.com",
+            "confirmed"
+          );
+
+          // Get the wallet balance
+          const walletBalance = await connection.getBalance(publicKey);
+
+          // Convert lamports to SOL
+          const solBalance = walletBalance / LAMPORTS_PER_SOL;
+
+          // Set the balance state
+          setBalance(solBalance);
+
+          // Get recent transactions
+          try {
+            const signatures = await connection.getSignaturesForAddress(
+              publicKey,
+              { limit: 5 }
+            );
+            setRecentTransactions(signatures);
+          } catch (err) {
+            console.error("Error fetching transactions:", err);
+            setRecentTransactions([]);
+          }
+
+          // Log wallet address and balance to console
+          console.log("Wallet Address:", publicKey.toString());
+          console.log("Wallet Balance:", solBalance, "SOL");
+        } catch (error) {
+          console.error("Error fetching wallet data:", error);
+        }
+      }
+    };
+
+    if (connected) {
+      getWalletInfo();
+    } else {
+      setBalance(null);
+      setRecentTransactions([]);
+    }
+  }, [publicKey, connected]);
+
+  const shortenAddress = (address: string) => {
+    return `${address.slice(0, 4)}...${address.slice(-4)}`;
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <h1 className="text-3xl font-bold text-foreground text-center mb-2">Connect Wallet</h1>
-      <p className="text-gray-600 dark:text-gray-300 text-center mb-8">
-        Connect your wallet to interact with the CredCall platform.
-      </p>
-      
-      {isConnected ? (
-        <div className="bg-background rounded-xl p-8 shadow-sm border border-gray-200 dark:border-gray-800 text-center">
-          <div className="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-            </svg>
+    <div className="py-12 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
+      <div className="text-center mb-12">
+        <h1 className="text-3xl font-bold text-foreground mb-4">
+          Connect Your Wallet
+        </h1>
+        <p className="text-lg text-gray-600 dark:text-gray-300">
+          Connect your Solana wallet to start creating or following token calls.
+        </p>
+      </div>
+
+      <div className="flex flex-col items-center justify-center mb-8">
+        <WalletMultiButton className="rounded-full border border-solid transition-colors flex items-center justify-center hover:bg-opacity-90 font-medium px-8 py-4 text-lg" />
+      </div>
+
+      {connected && publicKey ? (
+        <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-6 shadow-md max-w-2xl mx-auto">
+          <h2 className="text-xl font-bold mb-4">Wallet Information</h2>
+
+          <div className="space-y-4">
+            <div className="flex justify-between items-start">
+              <span className="text-gray-600 dark:text-gray-300">Address:</span>
+              <div className="flex flex-col items-end">
+                <div className="font-mono text-sm break-all text-right">
+                  {publicKey.toString()}
+                </div>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(publicKey.toString());
+                  }}
+                  className="text-blue-600 dark:text-blue-400 text-xs hover:underline mt-1"
+                >
+                  Copy Address
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600 dark:text-gray-300">Balance:</span>
+              <span className="font-mono">
+                {balance !== null ? `${balance.toFixed(5)} SOL` : "Loading..."}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600 dark:text-gray-300">Network:</span>
+              <span className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-1 rounded-full text-xs">
+                Devnet
+              </span>
+            </div>
           </div>
-          <h2 className="text-xl font-bold mb-2">Wallet Connected</h2>
-          <p className="text-gray-600 dark:text-gray-300 mb-6">
-            You have successfully connected your {walletType} wallet.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link 
-              href="/profile"
-              className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-opacity-90 font-medium px-6 py-3"
-            >
-              View Profile
-            </Link>
-            <Link 
-              href="/calls"
-              className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium px-6 py-3"
-            >
-              Explore Calls
-            </Link>
-          </div>
+
+          {recentTransactions.length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-md font-semibold mb-2">
+                Recent Transactions:
+              </h3>
+              <div className="space-y-2">
+                {recentTransactions.map((tx, i) => (
+                  <div key={i} className="text-xs">
+                    <a
+                      href={`https://explorer.solana.com/tx/${tx.signature}?cluster=devnet`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 dark:text-blue-400 hover:underline font-mono"
+                    >
+                      {tx.signature.slice(0, 8)}...{tx.signature.slice(-8)}
+                    </a>
+                    <span className="text-gray-500 ml-2">
+                      {new Date(tx.blockTime * 1000).toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
-        <div className="bg-background rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
-          <div className="space-y-4">
-            <button
-              onClick={() => handleConnect('Phantom')}
-              disabled={isConnecting}
-              className="w-full p-4 rounded-lg border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 flex items-center justify-between transition-colors"
-            >
-              <div className="flex items-center">
-                <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mr-3">
-                  <span className="text-purple-600 dark:text-purple-300 font-bold">P</span>
-                </div>
-                <span className="font-medium">Phantom Wallet</span>
-              </div>
-              {isConnecting && walletType === 'Phantom' ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-foreground"></div>
-              ) : (
-                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                </svg>
-              )}
-            </button>
-            
-            <button
-              onClick={() => handleConnect('Solflare')}
-              disabled={isConnecting}
-              className="w-full p-4 rounded-lg border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 flex items-center justify-between transition-colors"
-            >
-              <div className="flex items-center">
-                <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900 rounded-full flex items-center justify-center mr-3">
-                  <span className="text-orange-600 dark:text-orange-300 font-bold">S</span>
-                </div>
-                <span className="font-medium">Solflare Wallet</span>
-              </div>
-              {isConnecting && walletType === 'Solflare' ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-foreground"></div>
-              ) : (
-                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                </svg>
-              )}
-            </button>
-            
-            <button
-              onClick={() => handleConnect('Backpack')}
-              disabled={isConnecting}
-              className="w-full p-4 rounded-lg border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 flex items-center justify-between transition-colors"
-            >
-              <div className="flex items-center">
-                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mr-3">
-                  <span className="text-blue-600 dark:text-blue-300 font-bold">B</span>
-                </div>
-                <span className="font-medium">Backpack</span>
-              </div>
-              {isConnecting && walletType === 'Backpack' ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-foreground"></div>
-              ) : (
-                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                </svg>
-              )}
-            </button>
-          </div>
-          
-          <div className="mt-8 text-center text-sm text-gray-500">
-            <p>Don't have a Solana wallet?</p>
-            <a 
-              href="https://docs.solana.com/wallet-guide" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-blue-600 dark:text-blue-400 hover:underline"
-            >
-              Learn how to set up a wallet
-            </a>
-          </div>
+        <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-6 max-w-2xl mx-auto text-center">
+          <p className="text-gray-600 dark:text-gray-300">
+            Please connect your wallet to see your account information.
+          </p>
         </div>
       )}
     </div>
   );
-} 
+}
