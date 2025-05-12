@@ -2,9 +2,9 @@ import React from "react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
-import SolanaProvider from "../components/SolanaProvider";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import WalletConnectionProvider from "@/context/WalletConnectionProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,7 +18,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "CredCall - Trustless Token Call Verification",
-  description: "A platform for trustless, on-chain crypto call verification and accountability",
+  description:
+    "A platform for trustless, on-chain crypto call verification and accountability",
 };
 
 export default function RootLayout({
@@ -31,13 +32,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
       >
-        <SolanaProvider>
+        <WalletConnectionProvider>
           <Navbar />
-          <main className="flex-grow">
-            {children}
-          </main>
+          <main className="flex-grow">{children}</main>
           <Footer />
-        </SolanaProvider>
+        </WalletConnectionProvider>
       </body>
     </html>
   );
