@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { LAMPORTS_PER_SOL, Connection } from "@solana/web3.js";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 export default function CreateCallPage() {
   const { publicKey, connected, disconnect } = useWallet();
@@ -298,7 +299,7 @@ export default function CreateCallPage() {
             </div>
           </form>
         </div>
-      </div>
-    </ProtectedRoute>
+      )}
+    </div>
   );
 }
