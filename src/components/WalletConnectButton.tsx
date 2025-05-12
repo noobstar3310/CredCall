@@ -1,51 +1,82 @@
 "use client";
 
-import { FC, useEffect, useState } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import React, { useCallback, useState, useEffect } from 'react';
+import { useWallet } from '@solana/wallet-adapter-react';
+import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { LAMPORTS_PER_SOL, Connection } from "@solana/web3.js";
 
-interface WalletConnectButtonProps {
-  className?: string;
-}
+// Dynamically import the WalletMultiButton component with SSR disabled
+const WalletMultiButton = dynamic(
+  async () => {
+    const { WalletMultiButton } = await import('@solana/wallet-adapter-react-ui');
+    return { default: WalletMultiButton };
+  },
+  { ssr: false }
+);
 
-const WalletConnectButton: FC<WalletConnectButtonProps> = ({ className }) => {
-  const { publicKey, connected } = useWallet();
+const WalletConnectButton = () => {
+  const { publicKey, connected, connecting, wallet, wallets } = useWallet();
+  const [hasError, setHasError] = useState(false);
+  const [hasWallet, setHasWallet] = useState<boolean | null>(null);
+  const [mounted, setMounted] = useState(false);
 
+  // Set mounted state when component mounts
   useEffect(() => {
-    const getBalance = async () => {
-      if (publicKey) {
-        try {
-          // Connect to the Solana devnet
-          const connection = new Connection(
-            "https://api.devnet.solana.com",
-            "confirmed"
-          );
+    setMounted(true);
+  }, []);
 
-          // Get the wallet balance
-          const walletBalance = await connection.getBalance(publicKey);
-
-          // Convert lamports to SOL
-          const solBalance = walletBalance / LAMPORTS_PER_SOL;
-
-          // Log wallet address and balance to console
-          console.log("Wallet Address:", publicKey.toString());
-          console.log("Wallet Balance:", solBalance, "SOL");
-        } catch (error) {
-          console.error("Error fetching balance:", error);
-        }
+  // Check if wallet is available in browser
+  useEffect(() => {
+    if (mounted) {
+      try {
+        const hasSolanaWallet = !!(
+          (window as any).solana || 
+          (window as any).phantom || 
+          wallets.length > 0 && wallets.some(adapter => adapter.readyState === 'Installed')
+        );
+        setHasWallet(hasSolanaWallet);
+      } catch (error) {
+        console.error('Error checking wallet availability:', error);
+        setHasWallet(false);
       }
-    };
-
-    if (connected) {
-      getBalance();
     }
-  }, [publicKey, connected]);
+  }, [mounted, wallets]);
+
+  // Handler for wallet errors
+  const onError = useCallback((error: Error) => {
+    console.error('Wallet error:', error);
+    setHasError(true);
+  }, []);
+
+  // If we're not mounted yet (in SSR), return placeholder
+  if (!mounted) {
+    return (
+      <button 
+        className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-opacity-90 font-medium text-sm px-4 py-2"
+        disabled
+      >
+        Connect Wallet
+      </button>
+    );
+  }
+
+  // If there's an error connecting or we know there's no wallet, show a fallback button
+  if (hasError || (hasWallet === false)) {
+    return (
+      <Link 
+        href="/connect"
+        className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-opacity-90 font-medium text-sm px-4 py-2"
+      >
+        Connect Wallet
+      </Link>
+    );
+  }
 
   return (
-    <div className={className}>
-      <WalletMultiButton className="rounded-full border border-solid transition-colors flex items-center justify-center hover:bg-opacity-90 font-medium px-6 py-3 text-center" />
-    </div>
+    <WalletMultiButton 
+      className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-opacity-90 font-medium text-sm px-4 py-2"
+    />
   );
 };
 

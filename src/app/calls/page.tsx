@@ -1,13 +1,22 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import * as SolanaProgramService from "@/services/solanaProgram";
 import * as TokenService from "@/services/tokenService";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import dynamic from 'next/dynamic';
 import { TokenPriceData } from "@/services/tokenService";
+
+// Dynamically import the WalletMultiButton component with SSR disabled
+const WalletMultiButton = dynamic(
+  async () => {
+    const { WalletMultiButton } = await import('@solana/wallet-adapter-react-ui');
+    return { default: WalletMultiButton };
+  },
+  { ssr: false }
+);
 
 // Interface for combined trade call and token data
 interface TradeCallData {
@@ -130,28 +139,24 @@ export default function CallsPage() {
     }
   }, [tradeCalls]);
 
-  // Fetch trade calls when wallet connects
+  // Fetch trade calls only on initial mount when wallet is connected
   useEffect(() => {
-    if (connected && publicKey) {
+    if (connected && publicKey && !tradeCallsLoaded) {
       fetchTradeCalls();
-    } else {
+    } else if (!connected) {
       // Clear data when wallet disconnects
       setTradeCalls([]);
       setTradeCallsLoaded(false);
     }
-  }, [connected, publicKey, fetchTradeCalls]);
-
-  // Fetch token data after trade calls are loaded
-  useEffect(() => {
-    if (tradeCallsLoaded && tradeCalls.length > 0) {
-      fetchTokenData();
-    }
-  }, [tradeCallsLoaded, tradeCalls.length, fetchTokenData]);
+  }, [connected, publicKey, fetchTradeCalls, tradeCallsLoaded]);
 
   // Function to refresh all data
   const handleRefresh = async () => {
+    setTradeCallsLoaded(false); // Reset the loaded state
     await fetchTradeCalls();
-    // Token data will be fetched automatically due to the effect above
+    if (tradeCalls.length > 0) {
+      await fetchTokenData();
+    }
   };
 
   // Generate a caller name based on wallet address

@@ -7,7 +7,10 @@ import Link from 'next/link';
 
 // Dynamically import the WalletMultiButton component with SSR disabled to prevent hydration errors
 const WalletMultiButton = dynamic(
-  async () => (await import('@solana/wallet-adapter-react-ui')).WalletMultiButton,
+  async () => {
+    const { WalletMultiButton } = await import('@solana/wallet-adapter-react-ui');
+    return { default: WalletMultiButton };
+  },
   { ssr: false }
 );
 
@@ -42,7 +45,7 @@ const WalletButton = () => {
   }, [wallets]);
 
   // Handler for wallet errors
-  const onError = useCallback((error) => {
+  const onError = useCallback((error: Error) => {
     console.error('Wallet error:', error);
     setHasError(true);
   }, []);

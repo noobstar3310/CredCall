@@ -15,7 +15,10 @@ import "@solana/wallet-adapter-react-ui/styles.css";
 
 // Dynamic import of WalletModalProvider with SSR disabled
 const WalletModalProvider = dynamic(
-  () => import('@solana/wallet-adapter-react-ui').then(mod => mod.WalletModalProvider),
+  async () => {
+    const { WalletModalProvider } = await import('@solana/wallet-adapter-react-ui');
+    return { default: WalletModalProvider };
+  },
   { ssr: false }
 );
 
@@ -48,7 +51,7 @@ export const SolanaProvider: FC<SolanaProviderProps> = ({ children }) => {
   }, []);
 
   // Error handler for wallet connection issues
-  const onError = (error) => {
+  const onError = (error: Error) => {
     console.error('Wallet connection error:', error);
     // You could also add more sophisticated error handling here
   };

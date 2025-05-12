@@ -112,7 +112,7 @@ export function getTokenLogoUrl(tokenData: TokenPriceData | TokenMetadata | null
   }
   
   // Fallback: generate a URL based on address if available
-  const address = tokenData.address || (tokenData as TokenPriceData).tokenAddress;
+  const address = ('address' in tokenData ? tokenData.address : (tokenData as TokenPriceData).tokenAddress);
   if (address) {
     return `https://logo.moralis.io/solana-mainnet_${address}_9ed4525833b29588ead980afc8218b5a.webp`;
   }

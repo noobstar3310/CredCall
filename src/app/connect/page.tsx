@@ -2,8 +2,16 @@
 
 import React, { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import dynamic from 'next/dynamic';
 import { LAMPORTS_PER_SOL, Connection, PublicKey } from "@solana/web3.js";
+
+const WalletMultiButton = dynamic(
+  async () => {
+    const { WalletMultiButton } = await import('@solana/wallet-adapter-react-ui');
+    return { default: WalletMultiButton };
+  },
+  { ssr: false }
+);
 
 export default function ConnectPage() {
   const { publicKey, connected } = useWallet();
