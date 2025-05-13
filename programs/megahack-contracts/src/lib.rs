@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::system_instruction;
 
-declare_id!("4SBb22ZVVGbocVSiadxDoGbNV4u67y4r44okZjVPB7Q3");
+declare_id!("D5tsQfk3tYPLc9PTrBqfvZUsT8rgQ1cZYg49MWXsyGrk");
 
 #[program]
 pub mod trade_call_platform {
@@ -63,6 +63,7 @@ pub mod trade_call_platform {
         trade_call.is_distributed = false;
         trade_call.payout_per_follower = 0;
         trade_call.claimed_followers = Vec::new();
+        trade_call.caller_payout = 0;
 
         id_counter.value += 1;
 
@@ -119,14 +120,19 @@ pub mod trade_call_platform {
 
         trade_call.status = 1;
 
-        let half_fee = user_vault.reserved_fee / 2;
-        **user_vault.to_account_info().try_borrow_mut_lamports()? -= half_fee;
-        **ctx.accounts.caller.try_borrow_mut_lamports()? += half_fee;
+        let reserved_fee_per_follower = 1_000_000;
+        let total_reserved_fees = trade_call.followers.len() as u64 * reserved_fee_per_follower;
+        let half_reserved_fees = total_reserved_fees / 2;
+
+        **user_vault.to_account_info().try_borrow_mut_lamports()? -= half_reserved_fees;
+        **ctx.accounts.caller.try_borrow_mut_lamports()? += half_reserved_fees;
 
         user_vault.reserved_fee = 0;
 
         **trade_call.to_account_info().try_borrow_mut_lamports()? -= staked_amount;
         **ctx.accounts.caller.try_borrow_mut_lamports()? += staked_amount;
+
+        trade_call.caller_payout = staked_amount + half_reserved_fees;
 
         Ok(())
     }
@@ -236,7 +242,7 @@ pub struct DepositToVault<'info> {
 #[derive(Accounts)]
 #[instruction(token_address: Pubkey, stake_amount: u64)]
 pub struct CreateTradeCall<'info> {
-    #[account(init, payer = authority, space = 8 + 8 + 32 + 8 + 32 + 8 + 4 + (32 * 10) + 1 + 8 + 4 + (32 * 10) + 1, seeds = [b"trade_call", id_counter.value.to_le_bytes().as_ref()], bump)]
+    #[account(init, payer = authority, space = 8 + 8 + 32 + 8 + 32 + 8 + 4 + (32 * 10) + 1 + 8 + 4 + (32 * 10) + 1 + 8, seeds = [b"trade_call", id_counter.value.to_le_bytes().as_ref()], bump)]
     pub trade_call: Account<'info, TradeCall>,
     #[account(mut, seeds = [b"id_counter"], bump)]
     pub id_counter: Account<'info, IDCounter>,
@@ -335,6 +341,7 @@ pub struct TradeCall {
     pub is_distributed: bool,
     pub payout_per_follower: u64,
     pub claimed_followers: Vec<Pubkey>,
+    pub caller_payout: u64,
 }
 
 //
