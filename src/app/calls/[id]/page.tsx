@@ -394,14 +394,21 @@ export default function CallDetailPage() {
       {/* Call Information */}
       <div className="bg-background rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800 mb-8">
         <div className="flex items-center mb-6">
-          <div className="w-12 h-12 rounded-full overflow-hidden">
-            <Image 
-              src="/memecoinpfp.jpg" 
-              alt="Profile" 
-              width={48} 
-              height={48}
-              className="object-cover w-full h-full" 
-            />
+          <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center overflow-hidden">
+            {tokenData?.logo ? (
+              <img
+                src={TokenService.getTokenLogoUrl(tokenData)}
+                alt={`${tokenData.symbol || 'Token'} logo`}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'https://placehold.co/48x48/222/666?text=Token';
+                }}
+              />
+            ) : (
+              <div className="text-xs font-mono text-gray-500">
+                {parsed.tokenAddress.slice(0, 4)}
+              </div>
+            )}
           </div>
           <div className="ml-4">
             <p className="font-medium text-lg">
