@@ -8,6 +8,7 @@ import { PublicKey } from '@solana/web3.js';
 import * as SolanaProgramService from '@/services/solanaProgram';
 import * as TokenService from '@/services/tokenService';
 import dynamic from 'next/dynamic';
+import axios from 'axios';
 
 // Dynamically import the WalletMultiButton component with SSR disabled
 const WalletMultiButton = dynamic(
@@ -21,7 +22,7 @@ const WalletMultiButton = dynamic(
 export default function CallDetailPage() {
   const router = useRouter();
   const pathname = usePathname();
-  const { connected, publicKey } = useWallet();
+  const { connected, publicKey, wallet } = useWallet();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +32,8 @@ export default function CallDetailPage() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [hasClaimed, setHasClaimed] = useState(false);
+  const [tokenVerified, setTokenVerified] = useState<boolean | null>(null);
+  const [verifying, setVerifying] = useState(false);
 
   // Get call ID from URL
   const callId = pathname?.split('/').pop();
@@ -85,9 +88,77 @@ export default function CallDetailPage() {
     }
   }, [callId, mounted, publicKey]);
 
+  // Verify if user owns the token
+  const verifyTokenOwnership = async () => {
+    if (!publicKey || !callData?.parsed?.tokenAddress) return false;
+    
+    try {
+      setVerifying(true);
+      setError(null);
+      setSuccess(null);
+      
+      // Make a request to our backend API endpoint
+      const userAddress = publicKey.toString();
+      const tokenAddress = callData.parsed.tokenAddress;
+      const tradeCallTimestamp = parseInt(callData.parsed.timestamp);
+      
+      console.log('Verifying token ownership:', {
+        userAddress: userAddress.slice(0, 6) + '...' + userAddress.slice(-4),
+        tokenAddress: tokenAddress.slice(0, 6) + '...' + tokenAddress.slice(-4),
+        tradeCallTimestamp: new Date(tradeCallTimestamp * 1000).toLocaleString()
+      });
+      
+      const response = await axios.post('/api/verify-token-ownership', {
+        userAddress,
+        tokenAddress,
+        tradeCallTimestamp
+      });
+      
+      console.log('Token verification response:', response.data);
+      
+      const { hasPurchased, message, tokenDetails, isMocked } = response.data;
+      setTokenVerified(hasPurchased);
+      
+      if (!hasPurchased) {
+        // Not owning the token is not an error, it's just a verification result
+        // We'll just show this as information instead of an error
+        setSuccess(null); // Clear any previous success messages
+        setError(null); // Clear any previous error messages
+      } else if (isMocked) {
+        // If the response is mocked (for development without API key)
+        console.log('Using mocked verification response');
+        setSuccess('Token verification simulated for development');
+      } else if (tokenDetails) {
+        // Display token details if available
+        const detailsMessage = `Verified! You own ${tokenDetails.amount} ${tokenDetails.symbol || 'tokens'}`;
+        setSuccess(detailsMessage);
+      }
+      
+      return hasPurchased;
+    } catch (err: any) { // Use 'any' type to handle axios error responses
+      console.error('Error verifying token ownership:', err);
+      
+      let errorMessage = 'Failed to verify token ownership. Please try again later.';
+      
+      // Extract more detailed error information if available
+      if (err.response?.data?.details) {
+        errorMessage = `Error: ${err.response.data.details}`;
+        console.error('API error details:', err.response.data);
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
+      setTokenVerified(false);
+      return false;
+    } finally {
+      setVerifying(false);
+    }
+  };
+
   // Handler for following a call
   const handleFollowCall = async () => {
-    if (!mounted || !connected || !publicKey) {
+    if (!mounted || !connected || !publicKey || !wallet) {
       router.push(`/connect?returnUrl=${encodeURIComponent(pathname)}`);
       return;
     }
@@ -109,12 +180,12 @@ export default function CallDetailPage() {
       // If the user doesn't have a vault, create one
       if (!userVaultInfo) {
         console.log('User vault not found. Creating vault...');
-        await SolanaProgramService.createUserVault(window.solana);
+        await SolanaProgramService.createUserVault(wallet.adapter);
         console.log('User vault created successfully');
       }
       
       // Now follow the trade call
-      const txid = await SolanaProgramService.followTradeCall(window.solana, callData.address);
+      const txid = await SolanaProgramService.followTradeCall(wallet.adapter, callData.address);
       console.log('Successfully followed trade call:', txid);
       
       // Update UI
@@ -157,9 +228,9 @@ export default function CallDetailPage() {
     }
   };
 
-  // Handler for claiming follower share
+  // Handler for claiming follower share with token verification
   const handleClaimShare = async () => {
-    if (!mounted || !connected || !publicKey) {
+    if (!mounted || !connected || !publicKey || !wallet) {
       router.push(`/connect?returnUrl=${encodeURIComponent(pathname)}`);
       return;
     }
@@ -174,7 +245,20 @@ export default function CallDetailPage() {
       setError(null);
       setSuccess(null);
       
-      const txid = await SolanaProgramService.claimFollowerShare(window.solana, callData.address);
+      // Verify token ownership if not already verified
+      if (tokenVerified === null) {
+        const isVerified = await verifyTokenOwnership();
+        if (!isVerified) {
+          setClaiming(false);
+          return;
+        }
+      } else if (tokenVerified === false) {
+        setError("You don't own this token. You must have purchased the token to claim rewards.");
+        setClaiming(false);
+        return;
+      }
+      
+      const txid = await SolanaProgramService.claimFollowerShare(wallet.adapter, callData.address);
       console.log('Successfully claimed follower share:', txid);
       
       // Update UI
@@ -451,22 +535,49 @@ export default function CallDetailPage() {
               </div>
             )}
             
+            {/* Token verification info - show as informational message, not error */}
+            {tokenVerified === false && !error && (
+              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-800 dark:text-blue-200">
+                You need to own the {callData.parsed.tokenSymbol || 'token'} to be eligible for claiming rewards. 
+                Please acquire the token before attempting to claim rewards.
+              </div>
+            )}
+            
+            {tokenVerified === true && !error && !success && (
+              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-800 dark:text-blue-200">
+                Token ownership verified! You can claim your rewards.
+              </div>
+            )}
+            
             <button
-              onClick={handleClaimShare}
-              disabled={claiming || hasClaimed}
+              onClick={tokenVerified === null ? verifyTokenOwnership : handleClaimShare}
+              disabled={claiming || hasClaimed || verifying || tokenVerified === false}
               className={`w-full rounded-full ${
                 hasClaimed 
-                  ? 'bg-gray-200 dark:bg-gray-700 text-foreground' 
-                  : 'bg-green-600 hover:bg-green-700 text-white'
-              } py-3 text-sm font-medium mb-4 ${claiming ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  ? 'bg-gray-200 dark:bg-gray-700 text-foreground'
+                  : tokenVerified === false
+                    ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                    : tokenVerified === true
+                      ? 'bg-green-600 hover:bg-green-700 text-white'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+              } py-3 text-sm font-medium mb-4 ${(claiming || verifying) ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {claiming ? (
                 <div className="flex items-center justify-center gap-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Processing...
+                  Processing Claim...
+                </div>
+              ) : verifying ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Verifying Token Ownership...
                 </div>
               ) : hasClaimed ? (
                 'Rewards Claimed'
+              ) : tokenVerified === null ? (
+                'Verify Eligibility'
+              ) : tokenVerified === false ? (
+                'Not Eligible to Claim'
               ) : (
                 'Claim Your Rewards'
               )}

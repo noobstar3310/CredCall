@@ -1,7 +1,10 @@
 import axios from 'axios';
 
-// Moralis API key
-const MORALIS_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImNlYjNjMTJiLTc2ZmUtNDYxOS1iOTZjLWJiMDYyYWNiNGY2MCIsIm9yZ0lkIjoiNDQ2NDI4IiwidXNlcklkIjoiNDU5MzEyIiwidHlwZUlkIjoiODgwZjFkNGEtZTE0MC00ZDMyLWFlNGYtMzhjMDNmNmUxNDk1IiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3NDY5NDYxNzUsImV4cCI6NDkwMjcwNjE3NX0.2MVKUCzFBKKTyiW0x_aykjkNC6pcqgohWi_iTIcCThs";
+// Moralis API key - use NEXT_PUBLIC_ prefix for client-side access
+const MORALIS_API_KEY = process.env.NEXT_PUBLIC_MORALIS_API_KEY;
+
+// For debugging - log if the API key is available (but not the actual key)
+console.log('Moralis API Key available:', !!MORALIS_API_KEY);
 
 // Interfaces for token data
 export interface TokenPriceData {
