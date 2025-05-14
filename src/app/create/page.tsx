@@ -3,10 +3,16 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { LAMPORTS_PER_SOL, Connection, PublicKey } from "@solana/web3.js";
 import { createTradeCall } from "@/services/solanaProgram";
 import dynamic from "next/dynamic";
+
+// Add type declaration for window.solana
+declare global {
+  interface Window {
+    solana?: any;
+  }
+}
 
 export default function CreateCallPage() {
   const { publicKey, connected, disconnect } = useWallet();
