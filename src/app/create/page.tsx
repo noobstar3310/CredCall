@@ -4,8 +4,9 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { LAMPORTS_PER_SOL, Connection } from "@solana/web3.js";
-import ProtectedRoute from "@/components/ProtectedRoute";
+import { LAMPORTS_PER_SOL, Connection, PublicKey } from "@solana/web3.js";
+import { createTradeCall } from "@/services/solanaProgram";
+import dynamic from "next/dynamic";
 
 export default function CreateCallPage() {
   const { publicKey, connected, disconnect } = useWallet();
@@ -15,6 +16,15 @@ export default function CreateCallPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [solBalance, setSolBalance] = useState(0);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const WalletMultiButton = dynamic(
+    async () => {
+      const { WalletMultiButton } = await import('@solana/wallet-adapter-react-ui');
+      return { default: WalletMultiButton };
+    },
+    { ssr: false }
+  );
 
   useEffect(() => {
     const getWalletBalance = async () => {
@@ -52,7 +62,7 @@ export default function CreateCallPage() {
     }
   }, [publicKey, connected]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Form validation
@@ -71,15 +81,50 @@ export default function CreateCallPage() {
       return;
     }
 
-    // Simulate form submission
+    // Validate token address format
+    try {
+      new PublicKey(tokenAddress);
+    } catch (err) {
+      setFormError("Invalid token address format.");
+      return;
+    }
+
     setIsSubmitting(true);
     setFormError("");
+    setSuccess(null);
 
-    // Mock API call - in a real app, this would call an actual API
-    setTimeout(() => {
-      // Redirect to calls page after submission
-      window.location.href = "/calls";
-    }, 2000);
+    try {
+      // Convert staking amount to lamports
+      const stakeAmountInLamports = Math.floor(parseFloat(stakingAmount) * LAMPORTS_PER_SOL);
+      
+      // Call the createTradeCall function
+      const tx = await createTradeCall(window.solana, tokenAddress, stakeAmountInLamports);
+      
+      setSuccess(`Trade call created successfully! Transaction: ${tx}`);
+      
+      // Clear form
+      setTokenAddress("");
+      setStakingAmount("");
+      setRationale("");
+      
+      // Redirect to calls page after a short delay
+      setTimeout(() => {
+        window.location.href = "/calls";
+      }, 2000);
+    } catch (err) {
+      console.error("Error creating trade call:", err);
+      if (err instanceof Error) {
+        if (err.message.includes("User rejected the request")) {
+          setFormError("Transaction was rejected. Please approve the transaction in your wallet to create the trade call.");
+        } else {
+          setFormError(err.message);
+        }
+      } else {
+        setFormError("Failed to create trade call. Please try again.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Helper function to calculate call visibility based on staking amount
@@ -144,6 +189,12 @@ export default function CreateCallPage() {
             {formError && (
               <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-800 dark:text-red-200">
                 {formError}
+              </div>
+            )}
+
+            {success && (
+              <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-800 dark:text-green-200">
+                {success}
               </div>
             )}
 
@@ -288,7 +339,7 @@ export default function CreateCallPage() {
                   isSubmitting ? "opacity-70 cursor-not-allowed" : ""
                 }`}
               >
-                {isSubmitting ? "Submitting..." : "Submit Token Call"}
+                {isSubmitting ? "Creating Trade Call..." : "Submit Token Call"}
               </button>
               <Link
                 href="/calls"

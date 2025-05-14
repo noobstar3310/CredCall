@@ -20,6 +20,12 @@ const Navbar = () => {
           </div>
 
           <div className="hidden sm:ml-6 sm:flex sm:items-center sm:space-x-8">
+          <Link
+              href="/vault"
+              className="px-3 py-2 text-sm font-medium text-foreground hover:opacity-80"
+            >
+              Vault
+            </Link>
             <Link
               href="/calls"
               className="px-3 py-2 text-sm font-medium text-foreground hover:opacity-80"
