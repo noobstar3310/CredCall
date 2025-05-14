@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import { LAMPORTS_PER_SOL, Connection, PublicKey } from "@solana/web3.js";
 
 const WalletMultiButton = dynamic(
@@ -110,7 +111,12 @@ export default function ConnectPage() {
             <div className="flex justify-between items-center">
               <span className="text-gray-600 dark:text-gray-300">Balance:</span>
               <span className="font-mono">
-                {balance !== null ? `${balance.toFixed(5)} SOL` : "Loading..."}
+                {balance !== null ? (
+                  <>
+                    {balance.toFixed(5)}{" "}
+                    <Image src="/Solana_logo.png" alt="SOL" width={12} height={12} className="inline-block ml-1" />
+                  </>
+                ) : "Loading..."}
               </span>
             </div>
 

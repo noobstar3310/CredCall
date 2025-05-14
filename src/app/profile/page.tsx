@@ -3,6 +3,7 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useWallet } from '@solana/wallet-adapter-react';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import { 
@@ -165,7 +166,15 @@ export default function ProfilePage() {
         {/* User Stats */}
         <div className="bg-background rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800 mb-8">
           <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-            <div className="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+            <div className="w-24 h-24 rounded-full overflow-hidden">
+              <Image 
+                src="/memecoinpfp.jpg" 
+                alt="Profile" 
+                width={96} 
+                height={96}
+                className="object-cover w-full h-full" 
+              />
+            </div>
             
             <div className="flex-1">
               <div className="text-center md:text-left">
@@ -174,7 +183,7 @@ export default function ProfilePage() {
                 </h2>
                 <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-4">
                   <div className="px-3 py-1 text-xs rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-                    {userStats.totalStaked.toFixed(2)} SOL Total Staked
+                    {userStats.totalStaked.toFixed(2)} <Image src="/Solana_logo.png" alt="SOL" width={12} height={12} className="inline-block ml-1 mb-0.5" /> Total Staked
                   </div>
                 </div>
               </div>
@@ -202,7 +211,9 @@ export default function ProfilePage() {
             <div className="text-center md:text-right">
               <div className="mb-2">
                 <p className="text-sm text-gray-500">Balance</p>
-                <p className="font-mono font-medium">{userBalance.toFixed(4)} SOL</p>
+                <p className="font-mono font-medium">
+                  {userBalance.toFixed(4)} SOL <Image src="/Solana_logo.png" alt="SOL" width={24} height={24} className="inline-block ml-1 mb-1" />
+                </p>
               </div>
             </div>
           </div>
@@ -293,7 +304,9 @@ export default function ProfilePage() {
                     <div className="flex items-center mb-4">
                       <div className="ml-0">
                         <p className="font-medium">{tokenSymbol} Token Call</p>
-                        <p className="text-sm text-gray-500">{stakedAmount} SOL staked</p>
+                        <p className="text-sm text-gray-500">
+                          {stakedAmount} <Image src="/Solana_logo.png" alt="SOL" width={10} height={10} className="inline-block ml-1" /> staked
+                        </p>
                       </div>
                       <div className={`ml-auto px-2 py-1 text-xs rounded-full ${getStatusColor(parsed.status)}`}>
                         {statusText}

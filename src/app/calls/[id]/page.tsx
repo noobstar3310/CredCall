@@ -9,6 +9,7 @@ import * as SolanaProgramService from '@/services/solanaProgram';
 import * as TokenService from '@/services/tokenService';
 import dynamic from 'next/dynamic';
 import axios from 'axios';
+import Image from 'next/image';
 
 // Dynamically import the WalletMultiButton component with SSR disabled
 const WalletMultiButton = dynamic(
@@ -393,21 +394,14 @@ export default function CallDetailPage() {
       {/* Call Information */}
       <div className="bg-background rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800 mb-8">
         <div className="flex items-center mb-6">
-          <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center overflow-hidden">
-            {tokenData?.logo ? (
-              <img
-                src={TokenService.getTokenLogoUrl(tokenData)}
-                alt={`${tokenData.symbol || 'Token'} logo`}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = 'https://placehold.co/48x48/222/666?text=Token';
-                }}
-              />
-            ) : (
-              <div className="text-xs font-mono text-gray-500">
-                {parsed.tokenAddress.slice(0, 4)}
-              </div>
-            )}
+          <div className="w-12 h-12 rounded-full overflow-hidden">
+            <Image 
+              src="/memecoinpfp.jpg" 
+              alt="Profile" 
+              width={48} 
+              height={48}
+              className="object-cover w-full h-full" 
+            />
           </div>
           <div className="ml-4">
             <p className="font-medium text-lg">
@@ -516,7 +510,7 @@ export default function CallDetailPage() {
         {parsed.status === 1 && (
           <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg p-4 text-sm text-green-800 dark:text-green-200 mb-4">
             <p className="font-medium">Call Completed Successfully</p>
-            <p className="mt-1">This call was successful. The caller received their staked SOL back and gained on-chain reputation.</p>
+            <p className="mt-1">This call was successful. The caller received their staked SOL <Image src="/Solana_logo.png" alt="SOL" width={16} height={14} className="inline-block mx-1" /> back and gained on-chain reputation.</p>
           </div>
         )}
         

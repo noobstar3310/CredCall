@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { LAMPORTS_PER_SOL, Connection, PublicKey } from "@solana/web3.js";
 import { createTradeCall } from "@/services/solanaProgram";
@@ -180,7 +181,7 @@ export default function CreateCallPage() {
             <div>
               <p className="text-sm text-gray-500">Balance</p>
               <p className="font-mono font-medium">
-                {solBalance.toFixed(4)} SOL
+                {solBalance.toFixed(4)} SOL <Image src="/Solana_logo.png" alt="SOL" width={20} height={20} className="inline-block ml-1 mb-1" />
               </p>
             </div>
             <button
@@ -231,7 +232,7 @@ export default function CreateCallPage() {
                 htmlFor="staking"
                 className="block text-sm font-medium mb-2"
               >
-                Staking Amount (SOL) <span className="text-red-500">*</span>
+                Staking Amount <Image src="/Solana_logo.png" alt="SOL" width={12} height={12} className="inline-block ml-1" /> <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <input
@@ -247,7 +248,7 @@ export default function CreateCallPage() {
                   required
                 />
                 <div className="absolute right-3 top-3 text-sm text-gray-500">
-                  SOL
+                  <Image src="/Solana_logo.png" alt="SOL" width={10} height={10} className="inline-block" />
                 </div>
               </div>
 
@@ -272,7 +273,7 @@ export default function CreateCallPage() {
                   </span>
                 </div>
                 <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
-                  The more SOL you stake, the higher visibility your call
+                  The more <Image src="/Solana_logo.png" alt="SOL" width={10} height={10} className="inline-block mx-1" /> you stake, the higher visibility your call
                   receives on the platform.
                 </p>
               </div>

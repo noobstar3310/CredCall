@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import * as SolanaProgramService from "@/services/solanaProgram";
@@ -198,7 +199,12 @@ export default function CallsPage() {
 
   // Format SOL amount
   const formatSol = (lamports: string) => {
-    return (parseInt(lamports) / 1000000000).toFixed(2) + " SOL";
+    return (
+      <span>
+        {(parseInt(lamports) / 1000000000).toFixed(2)}{" "} SOL
+        <Image src="/Solana_logo.png" alt="SOL" width={16} height={16} className="inline-block ml-1 mb-1" />
+      </span>
+    );
   };
 
   // Map numeric status to string

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { createUserVault, depositToVault, withdrawFromVault } from '@/services/solanaProgram';
 import { LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
@@ -188,10 +189,10 @@ export default function VaultPage() {
         )}
 
         {hasVault && (
-          <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-md">
-            <p className="text-sm text-gray-600">Current Balance:</p>
-            <p className="text-2xl font-bold text-gray-900">
-              {(vaultBalance / LAMPORTS_PER_SOL).toFixed(4)} SOL
+          <div className="bg-gray-50 dark:bg-gray-200 p-4 rounded-lg mb-6">
+            <h3 className="text-lg text-black font-medium mb-2">Vault Balance</h3>
+            <p className=" text-black text-2xl">
+              {(vaultBalance / LAMPORTS_PER_SOL).toFixed(4)} SOL <Image src="/Solana_logo.png" alt="SOL" width={24} height={24} className="inline-block ml-1 mb-1" />
             </p>
           </div>
         )}
@@ -209,10 +210,10 @@ export default function VaultPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            <div>
-              <label htmlFor="deposit" className="block text-sm font-medium text-gray-700">
-                Deposit SOL
-              </label>
+            <div className="mb-8">
+              <h3 className="text-lg font-medium mb-4 text-black">
+                Deposit <Image src="/Solana_logo.png" alt="SOL" width={20} height={20} className="inline-block mx-1 mb-1" />
+              </h3>
               <div className="mt-1 flex rounded-md shadow-sm">
                 <input
                   type="number"
@@ -226,7 +227,7 @@ export default function VaultPage() {
                   min="0"
                 />
                 <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">
-                  SOL
+                  <Image src="/Solana_logo.png" alt="SOL" width={16} height={16} className="inline-block" />
                 </span>
               </div>
               <button
@@ -239,9 +240,9 @@ export default function VaultPage() {
             </div>
 
             <div>
-              <label htmlFor="withdraw" className="block text-sm font-medium text-gray-700">
-                Withdraw SOL
-              </label>
+              <h3 className=" text-black text-lg font-medium mb-4">
+                Withdraw <Image src="/Solana_logo.png" alt="SOL" width={20} height={20} className="inline-block mx-1 mb-1" />
+              </h3>
               <div className="mt-1 flex rounded-md shadow-sm">
                 <input
                   type="number"
@@ -256,7 +257,7 @@ export default function VaultPage() {
                   max={vaultBalance / LAMPORTS_PER_SOL}
                 />
                 <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">
-                  SOL
+                  <Image src="/Solana_logo.png" alt="SOL" width={16} height={16} className="inline-block" />
                 </span>
               </div>
               <button
