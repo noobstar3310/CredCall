@@ -25,9 +25,12 @@ export default function CallDetailPage() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [callData, setCallData] = useState<any>(null);
   const [tokenData, setTokenData] = useState<any>(null);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [claiming, setClaiming] = useState(false);
+  const [hasClaimed, setHasClaimed] = useState(false);
 
   // Get call ID from URL
   const callId = pathname?.split('/').pop();
@@ -62,6 +65,12 @@ export default function CallDetailPage() {
         if (publicKey) {
           const isFollower = tradeCall.parsed.followers.includes(publicKey.toString());
           setIsFollowing(isFollower);
+          
+          // Check if user has already claimed their share
+          const hasClaimed = publicKey && tradeCall.parsed.claimedFollowers 
+            ? tradeCall.parsed.claimedFollowers.includes(publicKey.toString())
+            : false;
+          setHasClaimed(hasClaimed);
         }
       } catch (err) {
         console.error('Error fetching trade call:', err);
@@ -85,13 +94,124 @@ export default function CallDetailPage() {
     
     try {
       setLoading(true);
-      await SolanaProgramService.followTradeCall(window.solana, callData.address);
+      setError(null);
+      setSuccess(null);
+      
+      // First check if the user has a vault
+      const [userVaultPDA] = PublicKey.findProgramAddressSync(
+        [Buffer.from('user_vault'), publicKey.toBuffer()],
+        new PublicKey(SolanaProgramService.PROGRAM_ID)
+      );
+      
+      const connection = SolanaProgramService.getConnection();
+      const userVaultInfo = await connection.getAccountInfo(userVaultPDA);
+      
+      // If the user doesn't have a vault, create one
+      if (!userVaultInfo) {
+        console.log('User vault not found. Creating vault...');
+        await SolanaProgramService.createUserVault(window.solana);
+        console.log('User vault created successfully');
+      }
+      
+      // Now follow the trade call
+      const txid = await SolanaProgramService.followTradeCall(window.solana, callData.address);
+      console.log('Successfully followed trade call:', txid);
+      
+      // Update UI
       setIsFollowing(true);
+      
+      // Refresh the call data to update follower count
+      const updatedCall = await SolanaProgramService.fetchTradeCall(callData.address);
+      setCallData(updatedCall);
+      
+      // Show success message in the UI instead of an alert
+      setSuccess('Successfully followed this trade call!');
     } catch (err) {
       console.error('Error following trade call:', err);
-      setError(err instanceof Error ? err.message : 'Failed to follow trade call');
+      
+      let errorMessage = 'Failed to follow trade call';
+      
+      // Handle specific error cases
+      if (err instanceof Error) {
+        if (err.message.includes('User rejected the request')) {
+          errorMessage = 'Transaction was rejected in your wallet. Please try again.';
+        } else if (err.message.includes('AlreadyFollowing')) {
+          errorMessage = 'You are already following this trade call';
+          setIsFollowing(true);
+        } else if (err.message.includes('CannotFollowOwnTrade')) {
+          errorMessage = 'You cannot follow your own trade call';
+        } else if (err.message.includes('InsufficientDeposit') || err.message.includes('NoDeposit')) {
+          errorMessage = 'Insufficient funds in your vault. Please deposit SOL to your vault first.';
+          // Optionally redirect to vault page
+          if (confirm(`${errorMessage}\n\nWould you like to go to the vault page to deposit funds?`)) {
+            router.push('/vault');
+          }
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handler for claiming follower share
+  const handleClaimShare = async () => {
+    if (!mounted || !connected || !publicKey) {
+      router.push(`/connect?returnUrl=${encodeURIComponent(pathname)}`);
+      return;
+    }
+    
+    if (!callData || !callData.address) {
+      setError('Trade call data is not available');
+      return;
+    }
+    
+    try {
+      setClaiming(true);
+      setError(null);
+      setSuccess(null);
+      
+      const txid = await SolanaProgramService.claimFollowerShare(window.solana, callData.address);
+      console.log('Successfully claimed follower share:', txid);
+      
+      // Update UI
+      setHasClaimed(true);
+      
+      // Refresh the call data
+      const updatedCall = await SolanaProgramService.fetchTradeCall(callData.address);
+      setCallData(updatedCall);
+      
+      // Show success message in the UI
+      setSuccess('Successfully claimed your rewards!');
+    } catch (err) {
+      console.error('Error claiming follower share:', err);
+      
+      let errorMessage = 'Failed to claim follower share';
+      
+      // Handle specific error cases
+      if (err instanceof Error) {
+        if (err.message.includes('User rejected the request')) {
+          errorMessage = 'Transaction was rejected in your wallet. Please try again.';
+        } else if (err.message.includes('NotAFollower')) {
+          errorMessage = 'You are not a follower of this trade call';
+        } else if (err.message.includes('AlreadyClaimed')) {
+          errorMessage = 'You have already claimed your rewards';
+          setHasClaimed(true);
+        } else if (err.message.includes('FundsNotDistributed')) {
+          errorMessage = 'Funds have not been distributed yet';
+        } else if (err.message.includes('TradeCallNotActive')) {
+          errorMessage = 'This trade call is not active';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setClaiming(false);
     }
   };
 
@@ -264,42 +384,94 @@ export default function CallDetailPage() {
         </div>
 
         {parsed.status === 0 && (
-          <button
-            onClick={handleFollowCall}
-            disabled={loading}
-            className={`w-full rounded-full ${
-              isFollowing 
-                ? 'bg-gray-200 dark:bg-gray-700 text-foreground' 
-                : 'bg-blue-600 hover:bg-blue-700 text-white'
-            } py-3 text-sm font-medium ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            {loading ? (
-              <div className="flex items-center justify-center gap-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Processing...
+          <>
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-800 dark:text-red-200">
+                {error}
               </div>
-            ) : isFollowing ? (
-              'Following'
-            ) : connected ? (
-              'Follow This Call'
-            ) : (
-              'Connect Wallet to Follow'
             )}
-          </button>
+            
+            {success && (
+              <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-800 dark:text-green-200">
+                {success}
+              </div>
+            )}
+            
+            <button
+              onClick={handleFollowCall}
+              disabled={loading}
+              className={`w-full rounded-full ${
+                isFollowing 
+                  ? 'bg-gray-200 dark:bg-gray-700 text-foreground' 
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              } py-3 text-sm font-medium ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {loading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Processing...
+                </div>
+              ) : isFollowing ? (
+                'Following'
+              ) : connected ? (
+                'Follow This Call'
+              ) : (
+                'Connect Wallet to Follow'
+              )}
+            </button>
+          </>
         )}
 
         {parsed.status === 2 && (
-          <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4 text-sm text-red-800 dark:text-red-200">
+          <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4 text-sm text-red-800 dark:text-red-200 mb-4">
             <p className="font-medium">Call Slashed</p>
             <p className="mt-1">This call was slashed because the token price dropped significantly. The staked SOL was redistributed to followers.</p>
           </div>
         )}
 
         {parsed.status === 1 && (
-          <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg p-4 text-sm text-green-800 dark:text-green-200">
+          <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg p-4 text-sm text-green-800 dark:text-green-200 mb-4">
             <p className="font-medium">Call Completed Successfully</p>
             <p className="mt-1">This call was successful. The caller received their staked SOL back and gained on-chain reputation.</p>
           </div>
+        )}
+        
+        {/* Claim Follower Share button - only show for failed trade calls and followers who haven't claimed yet */}
+        {parsed.status === 2 && isFollowing && (
+          <>
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-800 dark:text-red-200">
+                {error}
+              </div>
+            )}
+            
+            {success && (
+              <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-800 dark:text-green-200">
+                {success}
+              </div>
+            )}
+            
+            <button
+              onClick={handleClaimShare}
+              disabled={claiming || hasClaimed}
+              className={`w-full rounded-full ${
+                hasClaimed 
+                  ? 'bg-gray-200 dark:bg-gray-700 text-foreground' 
+                  : 'bg-green-600 hover:bg-green-700 text-white'
+              } py-3 text-sm font-medium mb-4 ${claiming ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {claiming ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Processing...
+                </div>
+              ) : hasClaimed ? (
+                'Rewards Claimed'
+              ) : (
+                'Claim Your Rewards'
+              )}
+            </button>
+          </>
         )}
       </div>
 

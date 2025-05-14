@@ -1,5 +1,5 @@
 import { Connection, PublicKey, clusterApiUrl, Transaction } from '@solana/web3.js';
-import { Program, AnchorProvider, BN, web3 } from '@project-serum/anchor';
+import { Program, AnchorProvider, BN, web3, Idl } from '@project-serum/anchor';
 import { Buffer } from 'buffer';
 import { tryParseTradeCallAccount } from './accountParser';
 
@@ -7,7 +7,7 @@ import { tryParseTradeCallAccount } from './accountParser';
 export const PROGRAM_ID = 'DeTE4KgCH6uZnu7XxcsR62z4ke7Z4LTRxMFZZPd488GY';
 
 // Define the IDL (Interface Definition Language) structure for our program
-export const IDL = {
+export const IDL: Idl = {
   version: '0.1.0',
   name: 'trade_call_platform',
   instructions: [
@@ -119,7 +119,7 @@ export const IDL = {
       type: {
         kind: 'struct',
         fields: [
-          { name: 'admin', type: 'publicKey' }
+          { name: 'admin', type: { array: ['u8', 32] } }
         ]
       }
     },
@@ -178,7 +178,7 @@ export const IDL = {
     { code: 6011, name: 'FundsNotDistributed', msg: 'Funds not distributed' },
     { code: 6012, name: 'InsufficientWithdraw', msg: 'Insufficient deposit to withdraw' }
   ]
-};
+} as Idl;
 
 // Status mapping
 export const TRADE_CALL_STATUSES = {
@@ -379,11 +379,18 @@ export const followTradeCall = async (
     const program = getProgramInstance(wallet);
     const tradeCallPubkey = new PublicKey(tradeCallAddress);
     
+    // Derive the user vault address
+    const [userVault] = PublicKey.findProgramAddressSync(
+      [Buffer.from('user_vault'), wallet.publicKey.toBuffer()],
+      program.programId
+    );
+    
     // Call the followTrade instruction
     const tx = await program.methods
       .followTrade()
       .accounts({
         tradeCall: tradeCallPubkey,
+        userVault, // Include the user vault account
         follower: wallet.publicKey,
         systemProgram: web3.SystemProgram.programId
       })
@@ -401,6 +408,8 @@ export const followTradeCall = async (
         throw new Error('You cannot follow your own trade call');
       } else if (error.message.includes('TradeCallNotActive')) {
         throw new Error('This trade call is no longer active');
+      } else if (error.message.includes('NoDeposit') || error.message.includes('InsufficientDeposit')) {
+        throw new Error('Insufficient funds in your vault. Please deposit SOL first.');
       }
     }
     throw error;
