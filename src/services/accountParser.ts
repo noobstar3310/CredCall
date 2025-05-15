@@ -5,11 +5,26 @@ import { PublicKey } from '@solana/web3.js';
 // In a production app, you would use Anchor's proper account deserialization
 // This is mainly to extract the trade call account data for display purposes
 
+// Define interfaces for the parsed data
+export interface ParsedTradeCall {
+  id: string;
+  tokenAddress: string;
+  stakedAmount: string;
+  caller: string;
+  timestamp: string;
+  followers: string[];
+  status: number;
+  isDistributed: boolean;
+  payoutPerFollower: string;
+  claimedFollowers: string[];
+  callerPayout: string;
+}
+
 // Account discriminator is the first 8 bytes of the account data
 const ACCOUNT_DISCRIMINATOR_SIZE = 8;
 
 // Parse a TradeCall account from raw account data
-export function parseTradeCallAccount(accountData: Buffer | Uint8Array): any {
+export function parseTradeCallAccount(accountData: Buffer | Uint8Array): ParsedTradeCall | null {
   // Make sure we're working with a Buffer
   const data = Buffer.isBuffer(accountData) 
     ? accountData 
@@ -40,7 +55,7 @@ export function parseTradeCallAccount(accountData: Buffer | Uint8Array): any {
   
   try {
     // Debug logging for each field
-    const logField = (name: string, value: any, size: number) => {
+    const logField = (name: string, value: unknown, size: number) => {
       console.log(`Parsing ${name}:`, {
         offset,
         size,
@@ -191,7 +206,7 @@ export function parseTradeCallAccount(accountData: Buffer | Uint8Array): any {
 }
 
 // Try to parse account data that might be a TradeCall
-export function tryParseTradeCallAccount(accountData: Buffer | Uint8Array | string): any {
+export function tryParseTradeCallAccount(accountData: Buffer | Uint8Array | string): ParsedTradeCall | null {
   try {
     // If the input is a hex string, convert it to a Buffer
     const data = typeof accountData === 'string'

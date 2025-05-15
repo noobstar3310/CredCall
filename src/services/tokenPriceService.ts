@@ -37,7 +37,7 @@ export async function getTokenPriceData(tokenAddress: string): Promise<TokenPric
     // Validate the token address
     try {
       new PublicKey(tokenAddress);
-    } catch (e) {
+    } catch {
       console.error('Invalid token address:', tokenAddress);
       return null;
     }

@@ -4,7 +4,17 @@ import React, { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
-import { LAMPORTS_PER_SOL, Connection, PublicKey } from "@solana/web3.js";
+import { LAMPORTS_PER_SOL, Connection } from "@solana/web3.js";
+
+// Define interface for transaction data
+interface TransactionSignature {
+  signature: string;
+  slot: number;
+  blockTime?: number | null;
+  err?: object | null;
+  memo?: string | null;
+  confirmationStatus?: string;
+}
 
 const WalletMultiButton = dynamic(
   async () => {
@@ -66,10 +76,6 @@ export default function ConnectPage() {
       setRecentTransactions([]);
     }
   }, [publicKey, connected]);
-
-  const shortenAddress = (address: string) => {
-    return `${address.slice(0, 4)}...${address.slice(-4)}`;
-  };
 
   return (
     <div className="py-12 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">

@@ -17,6 +17,16 @@ const initMoralis = async () => {
   }
 };
 
+// Define types for Moralis response objects
+interface SolanaToken {
+  mint: string;
+  symbol: string;
+  amount: string;
+  associatedTokenAddress: string;
+  name?: string;
+  decimals?: number;
+}
+
 // Log the API key availability (but not the actual key for security)
 console.log('Moralis API Key available in API route:', !!process.env.MORALIS_API_KEY);
 
@@ -81,7 +91,7 @@ export async function POST(req: NextRequest) {
     const portfolio = response.raw;
     
     // Check if the user has the token
-    const matchingToken = portfolio.tokens?.find((token: any) => 
+    const matchingToken = portfolio.tokens?.find((token: SolanaToken) => 
       token.mint.toLowerCase() === tokenAddress.toLowerCase()
     );
     

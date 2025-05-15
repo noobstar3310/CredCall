@@ -13,7 +13,7 @@ import {
   timestampToDate,
   shortenAddress as originalShortenAddress
 } from '@/services/solanaProgram';
-import { Connection, PublicKey, clusterApiUrl, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { Connection, clusterApiUrl, LAMPORTS_PER_SOL } from '@solana/web3.js';
 
 // Define interfaces for the data structures
 interface ParsedTradeCall {
@@ -73,7 +73,7 @@ export default function ProfilePage() {
         setUserBalance(balance / LAMPORTS_PER_SOL);
 
         // Fetch trade calls
-        const calls = await fetchAllTradeCalls(publicKey);
+        const calls = await fetchAllTradeCalls();
         
         if (calls && calls.length > 0) {
           setTradeCalls(calls as TradeCallData[]);
@@ -133,14 +133,6 @@ export default function ProfilePage() {
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
     }
-  };
-
-  // Helper function to get performance color
-  const getPerformanceColor = (percentChange: string) => {
-    const value = parseFloat(percentChange.replace('%', ''));
-    if (value > 0) return 'text-green-600 dark:text-green-400';
-    if (value < 0) return 'text-red-600 dark:text-red-400';
-    return 'text-gray-600 dark:text-gray-400';
   };
 
   // Filter calls based on status and active tab
@@ -296,8 +288,6 @@ export default function ProfilePage() {
                 const timestamp = timestampToDate(parsed.timestamp || 0);
                 const tokenSymbol = parsed.tokenAddress ? parsed.tokenAddress.slice(0, 4) : 'TOKEN';
                 const statusText = (TRADE_CALL_STATUSES as TradeCallStatusMap)[parsed.status] || 'Unknown';
-                // In a real app, this would fetch current price and calculate percentage change
-                const percentChange = '+0.0%';
               
                 return (
                   <div key={address} className="bg-background rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">

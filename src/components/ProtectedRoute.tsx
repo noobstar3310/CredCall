@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { connected, publicKey } = useWallet();
+  const { connected } = useWallet();
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const pathname = usePathname();

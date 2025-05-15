@@ -2,22 +2,24 @@
 
 import React, { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { PublicKey } from "@solana/web3.js";
 import * as SolanaProgramService from "@/services/solanaProgram";
 import * as TokenPriceService from "@/services/tokenPriceService";
-import Link from "next/link";
+
+// Define TokenPriceData interface
+interface TokenPriceData {
+  symbol?: string;
+  price?: number;
+  change24h?: number;
+  marketCap?: number;
+}
 
 interface TradeCallCardProps {
-  id: string | number;
   tokenAddress: string;
   stakedAmount: string | number;
   caller: string;
   timestamp: string | number;
   status: 0 | 1 | 2; // 0 = Active, 1 = Successful, 2 = Failed
   followers?: string[];
-  isDistributed?: boolean;
-  payoutPerFollower?: string | number;
-  claimedFollowers?: string[];
   className?: string;
   callerName?: string; // Optional caller name for display
   rationale?: string; // Optional rationale text
@@ -25,24 +27,19 @@ interface TradeCallCardProps {
 }
 
 const TradeCallCard: React.FC<TradeCallCardProps> = ({
-  id,
   tokenAddress,
   stakedAmount,
   caller,
   timestamp,
   status,
   followers = [],
-  isDistributed = false,
-  payoutPerFollower = 0,
-  claimedFollowers = [],
   className = "",
   callerName,
   rationale,
   address,
 }) => {
   const { publicKey, connected, wallet } = useWallet();
-  const [tokenPriceData, setTokenPriceData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [tokenPriceData, setTokenPriceData] = useState<TokenPriceData | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followError, setFollowError] = useState<string | null>(null);
   const [followInProgress, setFollowInProgress] = useState(false);
@@ -83,21 +80,25 @@ const TradeCallCard: React.FC<TradeCallCardProps> = ({
 
   // Fetch token price data when component mounts
   useEffect(() => {
+    let isMounted = true;
     const fetchTokenPrice = async () => {
-      setIsLoading(true);
       try {
         const priceData = await TokenPriceService.getTokenPriceData(
           tokenAddress
         );
-        setTokenPriceData(priceData);
+        if (isMounted) {
+          setTokenPriceData(priceData);
+        }
       } catch (error) {
         console.error("Error fetching token price:", error);
-      } finally {
-        setIsLoading(false);
       }
     };
 
     fetchTokenPrice();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [tokenAddress]);
 
   // Get price change formatting
@@ -129,7 +130,9 @@ const TradeCallCard: React.FC<TradeCallCardProps> = ({
     setFollowError(null);
 
     try {
-      const txId = await SolanaProgramService.followTradeCall(wallet, address);
+      // Use type casting for wallet compatibility
+      const adapter = wallet as unknown as SolanaProgramService.WalletAdapter;
+      const txId = await SolanaProgramService.followTradeCall(adapter, address);
       console.log("Successfully followed trade call, transaction ID:", txId);
 
       // Update UI state
@@ -196,7 +199,7 @@ const TradeCallCard: React.FC<TradeCallCardProps> = ({
             {tokenPriceData?.price ? (
               <span
                 className={`font-mono text-sm ${
-                  tokenPriceData.change24h >= 0
+                  (tokenPriceData.change24h || 0) >= 0
                     ? "text-green-600"
                     : "text-red-600"
                 }`}

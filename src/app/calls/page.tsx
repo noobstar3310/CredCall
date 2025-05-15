@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { PublicKey } from "@solana/web3.js";
 import * as SolanaProgramService from "@/services/solanaProgram";
 import * as TokenService from "@/services/tokenService";
 import dynamic from 'next/dynamic';
@@ -57,9 +56,7 @@ export default function CallsPage() {
 
     try {
       // Fetch all trade calls from the program
-      const tradeCallAccounts = await SolanaProgramService.fetchAllTradeCalls(
-        publicKey
-      );
+      const tradeCallAccounts = await SolanaProgramService.fetchAllTradeCalls();
       console.log("Trade call accounts:", tradeCallAccounts);
 
       // Filter out any accounts that couldn't be parsed
@@ -411,14 +408,16 @@ export default function CallsPage() {
               <div className="flex items-center mb-4">
                 <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center overflow-hidden">
                   {call.tokenData?.logo ? (
-                    <img
+                    <Image
                       src={TokenService.getTokenLogoUrl(call.tokenData)}
                       alt={`${call.tokenData.symbol || "Token"} logo`}
                       className="w-full h-full object-cover"
+                      width={40}
+                      height={40}
                       onError={(e) => {
                         // Fallback if image fails to load
-                        (e.target as HTMLImageElement).src =
-                          "https://placehold.co/40x40/222/666?text=Token";
+                        const target = e.target as HTMLImageElement;
+                        target.src = "https://placehold.co/40x40/222/666?text=Token";
                       }}
                     />
                   ) : (

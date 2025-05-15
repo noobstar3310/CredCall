@@ -6,19 +6,43 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import * as SolanaProgramService from '@/services/solanaProgram';
+import { WalletAdapter } from '@/services/solanaProgram';
 import * as TokenService from '@/services/tokenService';
 import dynamic from 'next/dynamic';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import Image from 'next/image';
 
 // Dynamically import the WalletMultiButton component with SSR disabled
-const WalletMultiButton = dynamic(
+dynamic(
   async () => {
     const { WalletMultiButton } = await import('@solana/wallet-adapter-react-ui');
     return { default: WalletMultiButton };
   },
   { ssr: false }
 );
+
+// Define interfaces for token data and call data
+interface TokenData {
+  symbol?: string;
+  usdPrice?: number;
+  usdPrice24hrPercentChange?: number;
+  logo?: string;
+}
+
+interface TradeCallData {
+  address: string;
+  parsed: {
+    id: string;
+    tokenAddress: string;
+    tokenSymbol?: string;
+    stakedAmount: string;
+    timestamp: string;
+    caller: string;
+    followers: string[];
+    status: number;
+    claimedFollowers: string[];
+  };
+}
 
 export default function CallDetailPage() {
   const router = useRouter();
@@ -28,8 +52,8 @@ export default function CallDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [callData, setCallData] = useState<any>(null);
-  const [tokenData, setTokenData] = useState<any>(null);
+  const [callData, setCallData] = useState<TradeCallData | null>(null);
+  const [tokenData, setTokenData] = useState<TokenData | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [hasClaimed, setHasClaimed] = useState(false);
@@ -59,11 +83,11 @@ export default function CallDetailPage() {
           throw new Error('Trade call not found');
         }
         
-        setCallData(tradeCall);
+        setCallData(tradeCall as TradeCallData);
         
         // Fetch token data
         const tokenInfo = await TokenService.fetchTokenPrice(tradeCall.parsed.tokenAddress);
-        setTokenData(tokenInfo);
+        setTokenData(tokenInfo as TokenData);
         
         // Check if current user is following
         if (publicKey) {
@@ -117,7 +141,7 @@ export default function CallDetailPage() {
       
       console.log('Token verification response:', response.data);
       
-      const { hasPurchased, message, tokenDetails, isMocked } = response.data;
+      const { hasPurchased, tokenDetails, isMocked } = response.data;
       setTokenVerified(hasPurchased);
       
       if (!hasPurchased) {
@@ -136,13 +160,13 @@ export default function CallDetailPage() {
       }
       
       return hasPurchased;
-    } catch (err: any) { // Use 'any' type to handle axios error responses
+    } catch (err: unknown) {
       console.error('Error verifying token ownership:', err);
       
       let errorMessage = 'Failed to verify token ownership. Please try again later.';
       
       // Extract more detailed error information if available
-      if (err.response?.data?.details) {
+      if (axios.isAxiosError(err) && err.response?.data?.details) {
         errorMessage = `Error: ${err.response.data.details}`;
         console.error('API error details:', err.response.data);
       } else if (err instanceof Error) {
@@ -160,7 +184,7 @@ export default function CallDetailPage() {
   // Handler for following a call
   const handleFollowCall = async () => {
     if (!mounted || !connected || !publicKey || !wallet) {
-      router.push(`/connect?returnUrl=${encodeURIComponent(pathname)}`);
+      router.push(`/connect?returnUrl=${encodeURIComponent(pathname || '')}`);
       return;
     }
     
@@ -181,12 +205,19 @@ export default function CallDetailPage() {
       // If the user doesn't have a vault, create one
       if (!userVaultInfo) {
         console.log('User vault not found. Creating vault...');
-        await SolanaProgramService.createUserVault(wallet.adapter);
+        await SolanaProgramService.createUserVault(wallet.adapter as unknown as WalletAdapter);
         console.log('User vault created successfully');
       }
       
+      if (!callData) {
+        throw new Error('Trade call data is not available');
+      }
+      
       // Now follow the trade call
-      const txid = await SolanaProgramService.followTradeCall(wallet.adapter, callData.address);
+      const txid = await SolanaProgramService.followTradeCall(
+        wallet.adapter as unknown as WalletAdapter, 
+        callData.address
+      );
       console.log('Successfully followed trade call:', txid);
       
       // Update UI
@@ -194,7 +225,7 @@ export default function CallDetailPage() {
       
       // Refresh the call data to update follower count
       const updatedCall = await SolanaProgramService.fetchTradeCall(callData.address);
-      setCallData(updatedCall);
+      setCallData(updatedCall as TradeCallData);
       
       // Show success message in the UI instead of an alert
       setSuccess('Successfully followed this trade call!');
@@ -232,7 +263,7 @@ export default function CallDetailPage() {
   // Handler for claiming follower share with token verification
   const handleClaimShare = async () => {
     if (!mounted || !connected || !publicKey || !wallet) {
-      router.push(`/connect?returnUrl=${encodeURIComponent(pathname)}`);
+      router.push(`/connect?returnUrl=${encodeURIComponent(pathname || '')}`);
       return;
     }
     
@@ -259,7 +290,7 @@ export default function CallDetailPage() {
         return;
       }
       
-      const txid = await SolanaProgramService.claimFollowerShare(wallet.adapter, callData.address);
+      const txid = await SolanaProgramService.claimFollowerShare(wallet.adapter as unknown as WalletAdapter, callData.address);
       console.log('Successfully claimed follower share:', txid);
       
       // Update UI
@@ -267,7 +298,7 @@ export default function CallDetailPage() {
       
       // Refresh the call data
       const updatedCall = await SolanaProgramService.fetchTradeCall(callData.address);
-      setCallData(updatedCall);
+      setCallData(updatedCall as TradeCallData);
       
       // Show success message in the UI
       setSuccess('Successfully claimed your rewards!');
@@ -396,12 +427,15 @@ export default function CallDetailPage() {
         <div className="flex items-center mb-6">
           <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center overflow-hidden">
             {tokenData?.logo ? (
-              <img
+              <Image
                 src={TokenService.getTokenLogoUrl(tokenData)}
                 alt={`${tokenData.symbol || 'Token'} logo`}
                 className="w-full h-full object-cover"
+                width={48}
+                height={48}
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = 'https://placehold.co/48x48/222/666?text=Token';
+                  const target = e.target as HTMLImageElement;
+                  target.src = 'https://placehold.co/48x48/222/666?text=Token';
                 }}
               />
             ) : (
@@ -593,25 +627,25 @@ export default function CallDetailPage() {
         <div className="space-y-4">
           <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
             <p className="text-sm mb-2">
-              <span className="font-medium">Good Call Scenario:</span> If token price increases by {'>'}10% from the call price, this is considered a good call.
+              <span className="font-medium">Good Call Scenario:</span> If token price increases by &gt;10% from the call price, this is considered a good call.
             </p>
             <p className="text-sm text-gray-600 dark:text-gray-400">
               • Caller receives their staked SOL back
               <br />
-              • Caller's on-chain reputation increases
+              • Caller&apos;s on-chain reputation increases
             </p>
           </div>
           
           <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
             <p className="text-sm mb-2">
-              <span className="font-medium">Bad Call Scenario:</span> If token price drops by {'>'}50% from the call price, this is considered a bad call.
+              <span className="font-medium">Bad Call Scenario:</span> If token price drops by &gt;50% from the call price, this is considered a bad call.
             </p>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              • Caller's staked SOL is slashed
+              • Caller&apos;s staked SOL is slashed
               <br />
               • Slashed SOL is redistributed to verified followers
               <br />
-              • Caller's on-chain reputation decreases
+              • Caller&apos;s on-chain reputation decreases
             </p>
           </div>
         </div>

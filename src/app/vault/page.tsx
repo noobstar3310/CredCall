@@ -1,11 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { createUserVault, depositToVault, withdrawFromVault } from '@/services/solanaProgram';
+import { createUserVault, depositToVault, withdrawFromVault, WalletAdapter } from '@/services/solanaProgram';
 import { LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
 import { getConnection } from '@/services/solanaProgram';
+
+// Define an adapter for the window.solana type
+interface PhantomWallet {
+  isPhantom?: boolean;
+  publicKey?: { toString(): string };
+  connect: () => Promise<{ publicKey: string }>;
+  disconnect: () => Promise<void>;
+  signTransaction: (transaction: unknown) => Promise<unknown>;
+  signAllTransactions: (transactions: unknown[]) => Promise<unknown[]>;
+}
 
 export default function VaultPage() {
   const { publicKey, connected } = useWallet();
@@ -17,13 +27,7 @@ export default function VaultPage() {
   const [hasVault, setHasVault] = useState(false);
   const [vaultBalance, setVaultBalance] = useState<number>(0);
 
-  useEffect(() => {
-    if (connected && publicKey) {
-      checkVaultStatus();
-    }
-  }, [connected, publicKey]);
-
-  const checkVaultStatus = async () => {
+  const checkVaultStatus = useCallback(async () => {
     if (!publicKey) return;
 
     try {
@@ -45,7 +49,13 @@ export default function VaultPage() {
       console.error('Error checking vault status:', err);
       setHasVault(false);
     }
-  };
+  }, [publicKey]);
+
+  useEffect(() => {
+    if (connected && publicKey) {
+      checkVaultStatus();
+    }
+  }, [connected, publicKey, checkVaultStatus]);
 
   const handleCreateVault = async () => {
     if (!connected || !publicKey) {
@@ -58,7 +68,8 @@ export default function VaultPage() {
     setSuccess(null);
 
     try {
-      const tx = await createUserVault(window.solana);
+      // Cast window.solana to the proper type expected by the function
+      const tx = await createUserVault(window.solana as unknown as WalletAdapter);
       setSuccess(`Vault created successfully! Transaction: ${tx}`);
       setHasVault(true);
       // Refresh vault status after creation
@@ -96,7 +107,7 @@ export default function VaultPage() {
 
     try {
       const amountInLamports = Math.floor(Number(depositAmount) * LAMPORTS_PER_SOL);
-      const tx = await depositToVault(window.solana, amountInLamports);
+      const tx = await depositToVault(window.solana as unknown as WalletAdapter, amountInLamports);
       setSuccess(`Deposit successful! Transaction: ${tx}`);
       setDepositAmount('');
       // Refresh vault status after deposit
@@ -139,7 +150,7 @@ export default function VaultPage() {
     setSuccess(null);
 
     try {
-      const tx = await withdrawFromVault(window.solana, amountInLamports);
+      const tx = await withdrawFromVault(window.solana as unknown as WalletAdapter, amountInLamports);
       setSuccess(`Withdrawal successful! Transaction: ${tx}`);
       setWithdrawAmount('');
       // Refresh vault status after withdrawal

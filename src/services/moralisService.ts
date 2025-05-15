@@ -1,5 +1,19 @@
 import Moralis from 'moralis';
 
+// Define interfaces for token data
+interface Token {
+  mint: string;
+  amount: string;
+  decimals: number;
+  symbol?: string;
+  name?: string;
+}
+
+interface PortfolioResponse {
+  tokens: Token[];
+  nfts: unknown[];
+}
+
 // Initialize Moralis with the API key from environment variable
 const initMoralis = async () => {
   if (!Moralis.Core.isStarted) {
@@ -27,12 +41,12 @@ export const getUserPortfolio = async (address: string) => {
 };
 
 // Check if user has a specific token
-export const hasUserPurchasedToken = async (userAddress: string, tokenAddress: string, tradeCallTimestamp: number) => {
+export const hasUserPurchasedToken = async (userAddress: string, tokenAddress: string) => {
   try {
     const portfolio = await getUserPortfolio(userAddress);
     
     // Check if the user has the token in their portfolio
-    const hasToken = portfolio.tokens.some((token: any) => 
+    const hasToken = portfolio.tokens.some((token: Token) => 
       token.mint.toLowerCase() === tokenAddress.toLowerCase()
     );
     
@@ -61,7 +75,7 @@ export const hasUserPurchasedToken = async (userAddress: string, tokenAddress: s
 };
 
 // For future implementation: Get token transaction history
-export const getTokenTransactions = async (userAddress: string, tokenAddress: string) => {
+export const getTokenTransactions = async () => {
   try {
     await initMoralis();
     

@@ -1,9 +1,22 @@
 "use client";
 
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+
+// Define an interface for the window object with wallet properties
+interface WindowWithWallets extends Window {
+  solana?: {
+    isPhantom?: boolean;
+    publicKey?: { toString(): string };
+    connect: () => Promise<{ publicKey: string }>;
+    disconnect: () => Promise<void>;
+    signTransaction: (transaction: unknown) => Promise<unknown>;
+    signAllTransactions: (transactions: unknown[]) => Promise<unknown[]>;
+  };
+  phantom?: unknown;
+}
 
 // Dynamically import the WalletMultiButton component with SSR disabled
 const WalletMultiButton = dynamic(
@@ -15,7 +28,7 @@ const WalletMultiButton = dynamic(
 );
 
 const WalletConnectButton = () => {
-  const { publicKey, connected, connecting, wallet, wallets } = useWallet();
+  const { wallets } = useWallet();
   const [hasError, setHasError] = useState(false);
   const [hasWallet, setHasWallet] = useState<boolean | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -29,9 +42,11 @@ const WalletConnectButton = () => {
   useEffect(() => {
     if (mounted) {
       try {
+        const windowWithWallets = window as WindowWithWallets;
+        
         const hasSolanaWallet = !!(
-          (window as any).solana || 
-          (window as any).phantom || 
+          windowWithWallets.solana || 
+          windowWithWallets.phantom || 
           wallets.length > 0 && wallets.some(adapter => adapter.readyState === 'Installed')
         );
         setHasWallet(hasSolanaWallet);
@@ -41,12 +56,6 @@ const WalletConnectButton = () => {
       }
     }
   }, [mounted, wallets]);
-
-  // Handler for wallet errors
-  const onError = useCallback((error: Error) => {
-    console.error('Wallet error:', error);
-    setHasError(true);
-  }, []);
 
   // If we're not mounted yet (in SSR), return placeholder
   if (!mounted) {

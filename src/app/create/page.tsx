@@ -5,18 +5,25 @@ import Link from "next/link";
 import Image from "next/image";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { LAMPORTS_PER_SOL, Connection, PublicKey } from "@solana/web3.js";
-import { createTradeCall } from "@/services/solanaProgram";
+import { createTradeCall, WalletAdapter } from "@/services/solanaProgram";
 import dynamic from "next/dynamic";
 
-// Add type declaration for window.solana
+// Add type declaration for window.solana with a proper type
 declare global {
   interface Window {
-    solana?: any;
+    solana?: {
+      isPhantom?: boolean;
+      publicKey?: { toString(): string };
+      connect: () => Promise<{ publicKey: string }>;
+      disconnect: () => Promise<void>;
+      signTransaction: (transaction: unknown) => Promise<unknown>;
+      signAllTransactions: (transactions: unknown[]) => Promise<unknown[]>;
+    };
   }
 }
 
 export default function CreateCallPage() {
-  const { publicKey, connected, disconnect } = useWallet();
+  const { publicKey, connected, disconnect, wallet } = useWallet();
   const [tokenAddress, setTokenAddress] = useState("");
   const [rationale, setRationale] = useState("");
   const [stakingAmount, setStakingAmount] = useState("");
@@ -91,8 +98,13 @@ export default function CreateCallPage() {
     // Validate token address format
     try {
       new PublicKey(tokenAddress);
-    } catch (err) {
+    } catch (_) {
       setFormError("Invalid token address format.");
+      return;
+    }
+
+    if (!wallet || !wallet.adapter) {
+      setFormError("Wallet is not connected properly.");
       return;
     }
 
@@ -104,8 +116,8 @@ export default function CreateCallPage() {
       // Convert staking amount to lamports
       const stakeAmountInLamports = Math.floor(parseFloat(stakingAmount) * LAMPORTS_PER_SOL);
       
-      // Call the createTradeCall function
-      const tx = await createTradeCall(window.solana, tokenAddress, stakeAmountInLamports);
+      // Call the createTradeCall function with type casting
+      const tx = await createTradeCall(wallet.adapter as unknown as WalletAdapter, tokenAddress, stakeAmountInLamports);
       
       setSuccess(`Trade call created successfully! Transaction: ${tx}`);
       
@@ -118,13 +130,13 @@ export default function CreateCallPage() {
       setTimeout(() => {
         window.location.href = "/calls";
       }, 2000);
-    } catch (err) {
-      console.error("Error creating trade call:", err);
-      if (err instanceof Error) {
-        if (err.message.includes("User rejected the request")) {
+    } catch (error) {
+      console.error("Error creating trade call:", error);
+      if (error instanceof Error) {
+        if (error.message.includes("User rejected the request")) {
           setFormError("Transaction was rejected. Please approve the transaction in your wallet to create the trade call.");
         } else {
-          setFormError(err.message);
+          setFormError(error.message);
         }
       } else {
         setFormError("Failed to create trade call. Please try again.");
@@ -144,8 +156,9 @@ export default function CreateCallPage() {
     return "Minimal";
   };
 
-  // Helper function to shorten address
-  const shortenAddress = (address: string) => {
+  // Format the public key to a shorter display format
+  const formatAddress = (address: string | undefined) => {
+    if (!address) return "Unknown";
     return `${address.slice(0, 4)}...${address.slice(-4)}`;
   };
 
@@ -175,7 +188,7 @@ export default function CreateCallPage() {
             <div>
               <p className="text-sm text-gray-500">Connected Wallet</p>
               <p className="font-mono font-medium">
-                {publicKey ? shortenAddress(publicKey.toString()) : "Unknown"}
+                {publicKey ? formatAddress(publicKey.toString()) : "Unknown"}
               </p>
             </div>
             <div>

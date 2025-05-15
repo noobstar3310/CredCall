@@ -1,5 +1,5 @@
-import { Connection, PublicKey, clusterApiUrl, Transaction } from '@solana/web3.js';
-import { Program, AnchorProvider, BN, web3, Idl } from '@project-serum/anchor';
+import { Connection, PublicKey, clusterApiUrl } from '@solana/web3.js';
+import { Program, AnchorProvider, BN, web3, Idl, Wallet } from '@project-serum/anchor';
 import { Buffer } from 'buffer';
 import { tryParseTradeCallAccount } from './accountParser';
 
@@ -192,8 +192,11 @@ export const getConnection = () => {
   return new Connection(clusterApiUrl('devnet'), 'confirmed');
 };
 
+// Define a wallet interface compatible with Anchor's Wallet
+export type WalletAdapter = Wallet;
+
 // Create a program instance with a wallet
-export const getProgramInstance = (wallet: any) => {
+export const getProgramInstance = (wallet: WalletAdapter) => {
   const connection = getConnection();
   // Create a provider - with a wallet that can sign transactions
   const provider = new AnchorProvider(
@@ -213,7 +216,7 @@ export const getReadOnlyProgramInstance = (publicKey: PublicKey) => {
   // Create a provider with just a public key (can't sign transactions)
   const provider = new AnchorProvider(
     connection,
-    // @ts-ignore - we're not signing anything, just need publicKey for the provider
+    // @ts-expect-error - we're not signing anything, just need publicKey for the provider
     { publicKey },
     { commitment: 'confirmed' }
   );
@@ -224,20 +227,12 @@ export const getReadOnlyProgramInstance = (publicKey: PublicKey) => {
 };
 
 // Fetch all trade call accounts
-export const fetchAllTradeCalls = async (publicKey: PublicKey) => {
+export const fetchAllTradeCalls = async () => {
   const connection = getConnection();
   const programId = new PublicKey(PROGRAM_ID);
   
   try {
     console.log('Fetching program accounts from:', programId.toString());
-    
-    // Define known account discriminators
-    const ACCOUNT_DISCRIMINATORS = {
-      TRADE_CALL: 'trade_call',
-      USER_VAULT: 'user_vault',
-      PLATFORM_STATE: 'platform',
-      ID_COUNTER: 'id_counter'
-    };
     
     // Helper function to identify account type
     const identifyAccountType = (data: Buffer) => {
@@ -367,7 +362,7 @@ export const fetchTradeCall = async (tradeCallAddress: string) => {
 
 // Follow a trade call
 export const followTradeCall = async (
-  wallet: any,
+  wallet: WalletAdapter,
   tradeCallAddress: string
 ): Promise<string> => {
   if (!wallet || !wallet.publicKey) {
@@ -435,7 +430,7 @@ export const shortenAddress = (address: string) => {
 
 // New functions for program interaction
 
-export const initializePlatform = async (wallet: any): Promise<string> => {
+export const initializePlatform = async (wallet: WalletAdapter): Promise<string> => {
   if (!wallet || !wallet.publicKey) {
     throw new Error('Wallet not connected');
   }
@@ -463,7 +458,7 @@ export const initializePlatform = async (wallet: any): Promise<string> => {
   }
 };
 
-export const initializeIdCounter = async (wallet: any): Promise<string> => {
+export const initializeIdCounter = async (wallet: WalletAdapter): Promise<string> => {
   if (!wallet || !wallet.publicKey) {
     throw new Error('Wallet not connected');
   }
@@ -496,7 +491,7 @@ export const initializeIdCounter = async (wallet: any): Promise<string> => {
   }
 };
 
-export const createUserVault = async (wallet: any): Promise<string> => {
+export const createUserVault = async (wallet: WalletAdapter): Promise<string> => {
   if (!wallet || !wallet.publicKey) {
     throw new Error('Wallet not connected');
   }
@@ -525,7 +520,7 @@ export const createUserVault = async (wallet: any): Promise<string> => {
 };
 
 export const depositToVault = async (
-  wallet: any,
+  wallet: WalletAdapter,
   amount: number
 ): Promise<string> => {
   if (!wallet || !wallet.publicKey) {
@@ -556,7 +551,7 @@ export const depositToVault = async (
 };
 
 export const createTradeCall = async (
-  wallet: any,
+  wallet: WalletAdapter,
   tokenAddress: string,
   stakeAmount: number
 ): Promise<string> => {
@@ -596,7 +591,7 @@ export const createTradeCall = async (
 };
 
 export const resolveTradeCallSuccess = async (
-  wallet: any,
+  wallet: WalletAdapter,
   tradeCallAddress: string
 ): Promise<string> => {
   if (!wallet || !wallet.publicKey) {
@@ -637,7 +632,7 @@ export const resolveTradeCallSuccess = async (
 };
 
 export const resolveTradeCallFailureAll = async (
-  wallet: any,
+  wallet: WalletAdapter,
   tradeCallAddress: string
 ): Promise<string> => {
   if (!wallet || !wallet.publicKey) {
@@ -676,7 +671,7 @@ export const resolveTradeCallFailureAll = async (
 };
 
 export const claimFollowerShare = async (
-  wallet: any,
+  wallet: WalletAdapter,
   tradeCallAddress: string
 ): Promise<string> => {
   if (!wallet || !wallet.publicKey) {
@@ -704,7 +699,7 @@ export const claimFollowerShare = async (
 };
 
 export const withdrawFromVault = async (
-  wallet: any,
+  wallet: WalletAdapter,
   amount: number
 ): Promise<string> => {
   if (!wallet || !wallet.publicKey) {
