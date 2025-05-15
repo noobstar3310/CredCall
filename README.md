@@ -21,6 +21,7 @@ CredCall solves these problems by creating a trustless platform where:
 
 The platform uses Solana's smart contract capabilities to create a transparent, immutable record of all calls, their performance, and the distribution of rewards or penalties.
 
+
 ## Backend Architecture
 
 ![Backend Architecture Diagram](/public/architecture.png)
@@ -29,6 +30,7 @@ The platform uses Solana's smart contract capabilities to create a transparent, 
 
 ![Call Resolution Criteria](/public/criteria.png)
 
+=======
 ## User Flow
 
 ### For Token Callers (KOLs)
@@ -42,6 +44,7 @@ The platform uses Solana's smart contract capabilities to create a transparent, 
 5. If the call fails badly (>50% dump), your stake is slashed and distributed to followers
 
 ### For Followers
+
 
 1. Connect your Solana wallet
 2. Browse active token calls
@@ -82,6 +85,7 @@ The platform uses Solana's smart contract capabilities to create a transparent, 
    - Followers
    - Status (Active/Successful/Failed)
    - Payout information
+
 
 ## License
 
