@@ -17,7 +17,7 @@ import { Connection, clusterApiUrl, LAMPORTS_PER_SOL } from '@solana/web3.js';
 
 // Define interfaces for the data structures
 interface ParsedTradeCall {
-  id?: number;
+  id: string;
   tokenAddress?: string;
   stakedAmount: number | string;
   caller: string;
@@ -25,9 +25,9 @@ interface ParsedTradeCall {
   followers?: string[];
   status: number;
   isDistributed?: boolean;
-  payoutPerFollower?: number;
+  payoutPerFollower?: number | string;
   claimedFollowers?: string[];
-  callerPayout?: number;
+  callerPayout?: number | string;
 }
 
 interface TradeCallData {
