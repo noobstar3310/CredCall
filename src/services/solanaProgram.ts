@@ -574,7 +574,7 @@ export const createTradeCall = async (
     // Get current ID counter value
     const idCounterAccount = await program.account.idCounter.fetch(idCounter);
     const [tradeCall] = PublicKey.findProgramAddressSync(
-      [Buffer.from('trade_call'), new BN(idCounterAccount.value).toArrayLike(Buffer, 'le', 8)],
+      [Buffer.from('trade_call'), new BN(idCounterAccount.value as number).toArrayLike(Buffer, 'le', 8)],
       program.programId
     );
 
@@ -613,7 +613,7 @@ export const resolveTradeCallSuccess = async (
     const tradeCallPubkey = new PublicKey(tradeCallAddress);
     const tradeCallAccount = await program.account.tradeCall.fetch(tradeCallPubkey);
     const [userVault] = PublicKey.findProgramAddressSync(
-      [Buffer.from('user_vault'), tradeCallAccount.caller.toBuffer()],
+      [Buffer.from('user_vault'), (tradeCallAccount.caller as PublicKey).toBuffer()],
       program.programId
     );
 
@@ -623,7 +623,7 @@ export const resolveTradeCallSuccess = async (
         tradeCall: tradeCallPubkey,
         platformState,
         admin: wallet.publicKey,
-        caller: tradeCallAccount.caller,
+        caller: tradeCallAccount.caller as PublicKey,
         userVault,
         systemProgram: web3.SystemProgram.programId
       })
