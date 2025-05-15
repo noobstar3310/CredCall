@@ -7,16 +7,6 @@ import { createUserVault, depositToVault, withdrawFromVault, WalletAdapter } fro
 import { LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
 import { getConnection } from '@/services/solanaProgram';
 
-// Define an adapter for the window.solana type
-interface PhantomWallet {
-  isPhantom?: boolean;
-  publicKey?: { toString(): string };
-  connect: () => Promise<{ publicKey: string }>;
-  disconnect: () => Promise<void>;
-  signTransaction: (transaction: unknown) => Promise<unknown>;
-  signAllTransactions: (transactions: unknown[]) => Promise<unknown[]>;
-}
-
 export default function VaultPage() {
   const { publicKey, connected } = useWallet();
   const [isLoading, setIsLoading] = useState(false);

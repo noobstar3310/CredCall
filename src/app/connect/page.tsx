@@ -4,17 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
-import { LAMPORTS_PER_SOL, Connection } from "@solana/web3.js";
-
-// Define interface for transaction data
-interface TransactionSignature {
-  signature: string;
-  slot: number;
-  blockTime?: number | null;
-  err?: object | null;
-  memo?: string | null;
-  confirmationStatus?: string;
-}
+import { LAMPORTS_PER_SOL, Connection, ConfirmedSignatureInfo } from "@solana/web3.js";
 
 const WalletMultiButton = dynamic(
   async () => {
@@ -27,7 +17,7 @@ const WalletMultiButton = dynamic(
 export default function ConnectPage() {
   const { publicKey, connected } = useWallet();
   const [balance, setBalance] = useState<number | null>(null);
-  const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<ConfirmedSignatureInfo[]>([]);
 
   useEffect(() => {
     const getWalletInfo = async () => {
@@ -151,7 +141,7 @@ export default function ConnectPage() {
                       {tx.signature.slice(0, 8)}...{tx.signature.slice(-8)}
                     </a>
                     <span className="text-gray-500 ml-2">
-                      {new Date(tx.blockTime * 1000).toLocaleString()}
+                      {tx.blockTime ? new Date(tx.blockTime * 1000).toLocaleString() : 'Pending'}
                     </span>
                   </div>
                 ))}

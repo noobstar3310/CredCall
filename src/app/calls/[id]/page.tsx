@@ -9,7 +9,7 @@ import * as SolanaProgramService from '@/services/solanaProgram';
 import { WalletAdapter } from '@/services/solanaProgram';
 import * as TokenService from '@/services/tokenService';
 import dynamic from 'next/dynamic';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import Image from 'next/image';
 
 // Dynamically import the WalletMultiButton component with SSR disabled

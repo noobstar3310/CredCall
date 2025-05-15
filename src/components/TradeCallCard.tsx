@@ -30,7 +30,6 @@ const TradeCallCard: React.FC<TradeCallCardProps> = ({
   tokenAddress,
   stakedAmount,
   caller,
-  timestamp,
   status,
   followers = [],
   className = "",
@@ -49,9 +48,6 @@ const TradeCallCard: React.FC<TradeCallCardProps> = ({
     typeof stakedAmount === "string"
       ? SolanaProgramService.lamportsToSol(parseInt(stakedAmount)).toFixed(4)
       : SolanaProgramService.lamportsToSol(stakedAmount).toFixed(4);
-
-  // Format date
-  const formattedDate = SolanaProgramService.timestampToDate(timestamp);
 
   // Get status text
   const statusText =

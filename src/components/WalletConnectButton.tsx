@@ -29,7 +29,7 @@ const WalletMultiButton = dynamic(
 
 const WalletConnectButton = () => {
   const { wallets } = useWallet();
-  const [hasError, setHasError] = useState(false);
+  const [hasError] = useState(false);
   const [hasWallet, setHasWallet] = useState<boolean | null>(null);
   const [mounted, setMounted] = useState(false);
 

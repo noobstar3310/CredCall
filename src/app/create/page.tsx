@@ -98,7 +98,7 @@ export default function CreateCallPage() {
     // Validate token address format
     try {
       new PublicKey(tokenAddress);
-    } catch (_) {
+    } catch {
       setFormError("Invalid token address format.");
       return;
     }

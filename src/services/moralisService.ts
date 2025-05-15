@@ -9,11 +9,6 @@ interface Token {
   name?: string;
 }
 
-interface PortfolioResponse {
-  tokens: Token[];
-  nfts: unknown[];
-}
-
 // Initialize Moralis with the API key from environment variable
 const initMoralis = async () => {
   if (!Moralis.Core.isStarted) {
